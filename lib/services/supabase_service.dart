@@ -14,8 +14,9 @@ class SupabaseService {
   /// (Project Settings > API).
   static Future<void> initialize() async {
     await Supabase.initialize(
-      url: 'https://VOTRE_PROJET.supabase.co',
-      anonKey: 'VOTRE_CLE_ANON_PUBLIQUE',
+      url: 'https://iikqndrpufjmgzkesgvm.supabase.co',
+      anonKey:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpa3FuZHJwdWZqbWd6a2VzZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxODMwNjksImV4cCI6MjA5OTc1OTA2OX0.v5a1Lk4XFJnx6WVI5r9xtr86S0idbdpI-rDJXDOST90',
     );
   }
 
