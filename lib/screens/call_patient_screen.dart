@@ -7,6 +7,7 @@ import '../services/offline_queue_service.dart';
 import '../services/connectivity_service.dart';
 import '../widgets/sync_status_badge.dart';
 import 'user_list_screen.dart';
+import 'tv_display_screen.dart';
 import 'history_screen.dart';
 import 'dashboard_screen.dart';
 
@@ -79,6 +80,13 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
         title: const Text('Appeler un patient'),
         actions: [
           const SyncStatusBadge(),
+          IconButton(
+            tooltip: 'Écran TV',
+            icon: const Icon(Icons.tv_rounded),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const TvDisplayScreen()),
+            ),
+          ),
           IconButton(
             tooltip: 'Tableau de bord',
             icon: const Icon(Icons.bar_chart_rounded),
