@@ -66,6 +66,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
+                  const Text('BUILD TEST 7', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: AppSpacing.md),
                   TextField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
