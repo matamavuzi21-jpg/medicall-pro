@@ -1,3 +1,4 @@
+
 name: Build APK
 
 on:
@@ -15,6 +16,8 @@ jobs:
           channel: 'stable'
       - name: Generate Android project files
         run: flutter create --platforms=android --org com.medicallpro --project-name medicall_pro .
+      - name: Ensure INTERNET permission
+        run: sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
       - run: flutter pub get
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
