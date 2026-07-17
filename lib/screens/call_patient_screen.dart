@@ -1,16 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../models/patient_call.dart';
 import '../services/supabase_service.dart';
 import '../services/offline_queue_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/tts_service.dart';
+import '../services/announcement_builder.dart';
 import '../widgets/sync_status_badge.dart';
 import 'user_list_screen.dart';
-import 'tv_display_screen.dart';
 import 'history_screen.dart';
 import 'dashboard_screen.dart';
+import 'tv_display_screen.dart';
 
+/// Écran principal : saisie du patient et déclenchement de l'appel.
+///
+/// Deux modes d'utilisation possibles, au choix de l'hôpital :
+/// 1. "Mode 2 appareils" : ce poste + un second appareil ouvert sur
+///    TvDisplayScreen (icône 📺), affiché en salle d'attente.
+/// 2. "Mode 1 appareil" (zones reculées, sans second appareil) : ce même
+///    poste, relié en Bluetooth à une enceinte, annonce lui-même le
+///    patient à voix haute juste après l'appel — grâce au commutateur
+///    "Annonce vocale sur cet appareil" ci-dessous. Les deux modes
+///    peuvent aussi être actifs en même temps sans conflit.
 class CallPatientScreen extends StatefulWidget {
   const CallPatientScreen({super.key});
 
@@ -19,10 +32,33 @@ class CallPatientScreen extends StatefulWidget {
 }
 
 class _CallPatientScreenState extends State<CallPatientScreen> {
+  static const _localAnnouncePrefsKey = 'medicall_local_announce_enabled';
+
   final _nameCtrl = TextEditingController();
   final _salleCtrl = TextEditingController();
   ServiceType _selectedService = ServiceType.consultation;
   bool _sending = false;
+  bool _localAnnounceEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreLocalAnnouncePreference();
+  }
+
+  Future<void> _restoreLocalAnnouncePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getBool(_localAnnouncePrefsKey);
+    if (saved != null && mounted) {
+      setState(() => _localAnnounceEnabled = saved);
+    }
+  }
+
+  Future<void> _setLocalAnnouncePreference(bool value) async {
+    setState(() => _localAnnounceEnabled = value);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_localAnnouncePrefsKey, value);
+  }
 
   Future<void> _callPatient() async {
     final name = _nameCtrl.text.trim();
@@ -43,11 +79,16 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
         calledAt: DateTime.now(),
         calledBy: SupabaseService.instance.currentUser?.email ?? 'agent',
       );
-      // Toujours enregistré localement d'abord : aucun appel n'est perdu
-      // même sans réseau. Synchronisé automatiquement avec Supabase dès
-      // que la connexion (locale ou Internet) est disponible.
       final wasOnline = ConnectivityService.instance.isOnline;
       await OfflineQueueService.instance.callPatient(call);
+
+      if (_localAnnounceEnabled) {
+        final text = AnnouncementBuilder.build(
+          call,
+          TtsService.instance.currentLanguage,
+        );
+        TtsService.instance.announce(text);
+      }
 
       if (!mounted) return;
       _nameCtrl.clear();
@@ -101,9 +142,6 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
               MaterialPageRoute(builder: (_) => const HistoryScreen()),
             ),
           ),
-          // Visible pour tous ici ; l'accès réel est contrôlé côté serveur
-          // par les policies RLS de Supabase (réservé aux superviseurs et
-          // directeurs — voir README, section "Sécurité des rôles").
           IconButton(
             tooltip: 'Gestion des utilisateurs',
             icon: const Icon(Icons.group_outlined),
@@ -119,6 +157,11 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _LocalAnnounceCard(
+                enabled: _localAnnounceEnabled,
+                onChanged: _setLocalAnnouncePreference,
+              ),
+              const SizedBox(height: AppSpacing.lg),
               Text('Nom du patient', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.sm),
               TextField(
@@ -164,6 +207,51 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LocalAnnounceCard extends StatelessWidget {
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  const _LocalAnnounceCard({required this.enabled, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            Icon(
+              enabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+              color: enabled ? AppColors.bleuMedical : Colors.grey,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Annonce vocale sur cet appareil',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    enabled
+                        ? 'Utile en zone reculée : reliez une enceinte Bluetooth, aucun second appareil requis.'
+                        : 'Désactivé — utilisez ce mode si un écran TV séparé s\'occupe déjà de l\'annonce.',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: enabled,
+              activeThumbColor: AppColors.vertEmeraude,
+              onChanged: onChanged,
+            ),
+          ],
         ),
       ),
     );
