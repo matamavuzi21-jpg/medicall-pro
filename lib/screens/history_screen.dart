@@ -251,7 +251,7 @@ class _HistoryTile extends StatelessWidget {
         ),
         title: Text(call.patientName,
             style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('${call.service.label}'
+        subtitle: Text('${call.serviceDisplayLabel}'
             '${call.salle != null ? ' · ${call.salle}' : ''}'
             ' · par ${call.calledBy}'),
         trailing: Column(
