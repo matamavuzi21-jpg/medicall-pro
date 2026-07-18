@@ -20,7 +20,7 @@ class AnnouncementBuilder {
     switch (language) {
       case AppLanguage.francais:
         final lieu = salle != null && salle.isNotEmpty ? ' en $salle' : '';
-        return 'Monsieur ou Madame $name est attendu ou attendue '
+        return 'Monsieur, Madame $name, veuillez vous présenter '
             'à $service$lieu.';
 
       case AppLanguage.swahili:
