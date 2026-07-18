@@ -9,6 +9,7 @@ import '../services/connectivity_service.dart';
 import '../services/tts_service.dart';
 import '../services/announcement_builder.dart';
 import '../widgets/sync_status_badge.dart';
+import '../widgets/repeat_settings_dialog.dart';
 import 'user_list_screen.dart';
 import 'history_screen.dart';
 import 'dashboard_screen.dart';
@@ -250,6 +251,14 @@ class _LocalAnnounceCard extends StatelessWidget {
               value: enabled,
               activeThumbColor: AppColors.vertEmeraude,
               onChanged: onChanged,
+            ),
+            IconButton(
+              tooltip: 'Régler la répétition',
+              icon: const Icon(Icons.repeat_rounded),
+              onPressed: () => showDialog(
+                context: context,
+                builder: (_) => const RepeatSettingsDialog(),
+              ),
             ),
           ],
         ),
