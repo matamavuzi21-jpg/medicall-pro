@@ -38,6 +38,7 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
   final _nameCtrl = TextEditingController();
   final _salleCtrl = TextEditingController();
   ServiceType _selectedService = ServiceType.consultation;
+  final Set<String> _selectedSubServices = {};
   bool _sending = false;
   bool _localAnnounceEnabled = true;
 
@@ -61,11 +62,28 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
     await prefs.setBool(_localAnnouncePrefsKey, value);
   }
 
+  void _onServiceChanged(ServiceType? service) {
+    if (service == null) return;
+    setState(() {
+      _selectedService = service;
+      _selectedSubServices.clear();
+    });
+  }
+
   Future<void> _callPatient() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Veuillez saisir le nom du patient.')),
+      );
+      return;
+    }
+    if (_selectedService.hasSubOptions && _selectedSubServices.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Veuillez choisir au moins une option pour ${_selectedService.label}.'),
+        ),
       );
       return;
     }
@@ -76,6 +94,7 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
         id: const Uuid().v4(),
         patientName: name,
         service: _selectedService,
+        subServices: _selectedSubServices.toList(),
         salle: _salleCtrl.text.trim().isEmpty ? null : _salleCtrl.text.trim(),
         calledAt: DateTime.now(),
         calledBy: SupabaseService.instance.currentUser?.email ?? 'agent',
@@ -94,11 +113,12 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
       if (!mounted) return;
       _nameCtrl.clear();
       _salleCtrl.clear();
+      setState(() => _selectedSubServices.clear());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: wasOnline ? AppColors.succes : AppColors.attention,
           content: Text(wasOnline
-              ? '$name a été appelé(e) — ${_selectedService.label}'
+              ? '$name a été appelé(e) — ${call.serviceDisplayLabel}'
               : '$name enregistré(e) — sera envoyé(e) dès le retour du réseau'),
         ),
       );
@@ -177,10 +197,29 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
               const SizedBox(height: AppSpacing.lg),
               Text('Service', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.sm),
-              _ServiceGrid(
+              _ServiceDropdown(
                 selected: _selectedService,
-                onSelect: (s) => setState(() => _selectedService = s),
+                onChanged: _onServiceChanged,
               ),
+              if (_selectedService.hasSubOptions) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Précisez (un ou plusieurs choix)',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _SubOptionsChips(
+                  options: _selectedService.subOptions,
+                  selected: _selectedSubServices,
+                  onToggle: (option, isSelected) => setState(() {
+                    if (isSelected) {
+                      _selectedSubServices.add(option);
+                    } else {
+                      _selectedSubServices.remove(option);
+                    }
+                  }),
+                ),
+              ],
               const SizedBox(height: AppSpacing.lg),
               Text('Salle (optionnel)', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.sm),
@@ -267,53 +306,84 @@ class _LocalAnnounceCard extends StatelessWidget {
   }
 }
 
-class _ServiceGrid extends StatelessWidget {
+class _ServiceDropdown extends StatelessWidget {
   final ServiceType selected;
-  final ValueChanged<ServiceType> onSelect;
+  final ValueChanged<ServiceType?> onChanged;
 
-  const _ServiceGrid({required this.selected, required this.onSelect});
+  const _ServiceDropdown({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: AppSpacing.sm,
-      crossAxisSpacing: AppSpacing.sm,
-      childAspectRatio: 2.4,
-      children: ServiceType.values.map((s) {
-        final isSelected = s == selected;
-        return GestureDetector(
-          onTap: () => onSelect(s),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.bleuMedical : AppColors.blanc,
-              borderRadius: BorderRadius.circular(AppSpacing.radius),
-              border: Border.all(
-                color: isSelected ? AppColors.bleuMedical : AppColors.grisClair,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(s.emoji, style: const TextStyle(fontSize: 20)),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    s.label,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : AppColors.grisAnthracite,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.blanc,
+        borderRadius: BorderRadius.circular(AppSpacing.radius),
+        border: Border.all(color: AppColors.grisClair),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<ServiceType>(
+          value: selected,
+          isExpanded: true,
+          icon: const Icon(Icons.expand_more_rounded),
+          borderRadius: BorderRadius.circular(AppSpacing.radius),
+          items: ServiceType.values.map((s) {
+            return DropdownMenuItem(
+              value: s,
+              child: Row(
+                children: [
+                  Text(s.emoji, style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      s.label,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.grisAnthracite,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                  if (s.hasSubOptions)
+                    const Icon(Icons.list_rounded, size: 18, color: Colors.grey),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+class _SubOptionsChips extends StatelessWidget {
+  final List<String> options;
+  final Set<String> selected;
+  final void Function(String option, bool isSelected) onToggle;
+
+  const _SubOptionsChips({
+    required this.options,
+    required this.selected,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: options.map((option) {
+        final isSelected = selected.contains(option);
+        return FilterChip(
+          label: Text(option),
+          selected: isSelected,
+          selectedColor: AppColors.bleuMedical,
+          checkmarkColor: Colors.white,
+          labelStyle: TextStyle(
+            color: isSelected ? Colors.white : AppColors.grisAnthracite,
+            fontWeight: FontWeight.w600,
           ),
+          onSelected: (value) => onToggle(option, value),
         );
       }).toList(),
     );
