@@ -7,8 +7,15 @@ import '../services/announcement_builder.dart';
 import '../widgets/language_selector.dart';
 
 /// Écran destiné aux téléviseurs de la salle d'attente.
-/// Affiche le dernier patient appelé + un historique court des précédents,
-/// et déclenche l'annonce vocale à chaque nouvel appel reçu en temps réel.
+///
+/// Affiche un appel actif **par salle** en parallèle. C'est essentiel dès
+/// qu'un même service (ex : Consultation médicale) dispose de plusieurs
+/// salles/médecins : Dr X en salle 1 et Dr Y en salle 2 peuvent chacun
+/// appeler un patient au même moment, chaque salle gardant sa propre
+/// tuile à l'écran au lieu de s'écraser mutuellement. Les services sans
+/// salle renseignée (ex : Caisse) gardent une tuile unique par service.
+/// Les annonces vocales sont mises en file (voir TtsService) pour ne
+/// jamais se couper entre elles.
 class TvDisplayScreen extends StatefulWidget {
   const TvDisplayScreen({super.key});
 
@@ -16,30 +23,60 @@ class TvDisplayScreen extends StatefulWidget {
   State<TvDisplayScreen> createState() => _TvDisplayScreenState();
 }
 
+/// Clé de regroupement : une salle donnée si elle est renseignée, sinon
+/// le service lui-même (cas des services sans salle, ex : Caisse).
+String _tileKey(PatientCall call) {
+  if (call.salle != null && call.salle!.trim().isNotEmpty) {
+    return 'salle:${call.salle!.trim().toLowerCase()}';
+  }
+  return 'service:${call.service.name}';
+}
+
 class _TvDisplayScreenState extends State<TvDisplayScreen> {
-  List<PatientCall> _calls = [];
-  String? _lastAnnouncedId;
+  final Map<String, PatientCall> _latestByTile = {};
+  final Map<String, String> _lastAnnouncedIdByTile = {};
+  List<PatientCall> _recentHistory = [];
 
   @override
   void initState() {
     super.initState();
     SupabaseService.instance.watchCalls().listen((calls) {
-      setState(() => _calls = calls);
-      if (calls.isNotEmpty && calls.first.id != _lastAnnouncedId) {
-        _lastAnnouncedId = calls.first.id;
-        final text = AnnouncementBuilder.build(
-          calls.first,
-          TtsService.instance.currentLanguage,
-        );
-        TtsService.instance.announce(text);
+      setState(() {
+        _recentHistory = calls.take(6).toList();
+        for (final call in calls) {
+          final key = _tileKey(call);
+          final existing = _latestByTile[key];
+          if (existing == null || call.calledAt.isAfter(existing.calledAt)) {
+            _latestByTile[key] = call;
+          }
+        }
+      });
+
+      for (final call in calls) {
+        final key = _tileKey(call);
+        final lastId = _lastAnnouncedIdByTile[key];
+        final existingLatest = _latestByTile[key];
+        final isNewest = existingLatest == null || call.id == existingLatest.id;
+        if (isNewest && call.id != lastId) {
+          _lastAnnouncedIdByTile[key] = call.id;
+          final text = AnnouncementBuilder.build(
+            call,
+            TtsService.instance.currentLanguage,
+          );
+          TtsService.instance.announce(text);
+        }
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final current = _calls.isNotEmpty ? _calls.first : null;
-    final previous = _calls.skip(1).take(4).toList();
+    final tiles = _latestByTile.values.toList()
+      ..sort((a, b) {
+        final byService = a.service.index.compareTo(b.service.index);
+        if (byService != 0) return byService;
+        return (a.salle ?? '').compareTo(b.salle ?? '');
+      });
 
     return Scaffold(
       backgroundColor: AppColors.grisAnthracite,
@@ -65,10 +102,16 @@ class _TvDisplayScreenState extends State<TvDisplayScreen> {
                   const LanguageSelector(),
                 ],
               ),
-              const Spacer(),
-              if (current != null) _CurrentCallCard(call: current) else _EmptyState(),
-              const Spacer(),
-              if (previous.isNotEmpty) _PreviousCallsRow(calls: previous),
+              const SizedBox(height: AppSpacing.xl),
+              Expanded(
+                child: tiles.isEmpty
+                    ? const _EmptyState()
+                    : _TileGrid(calls: tiles),
+              ),
+              if (_recentHistory.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.md),
+                _PreviousCallsRow(calls: _recentHistory),
+              ],
             ],
           ),
         ),
@@ -77,42 +120,71 @@ class _TvDisplayScreenState extends State<TvDisplayScreen> {
   }
 }
 
-class _CurrentCallCard extends StatelessWidget {
-  final PatientCall call;
-  const _CurrentCallCard({required this.call});
+class _TileGrid extends StatelessWidget {
+  final List<PatientCall> calls;
+  const _TileGrid({required this.calls});
 
   @override
   Widget build(BuildContext context) {
+    final crossAxisCount = calls.length <= 1
+        ? 1
+        : calls.length <= 4
+            ? 2
+            : 3;
+    return GridView.builder(
+      itemCount: calls.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        mainAxisSpacing: AppSpacing.md,
+        crossAxisSpacing: AppSpacing.md,
+        childAspectRatio: 1.5,
+      ),
+      itemBuilder: (_, i) => _TileCard(call: calls[i]),
+    );
+  }
+}
+
+class _TileCard extends StatelessWidget {
+  final PatientCall call;
+  const _TileCard({required this.call});
+
+  @override
+  Widget build(BuildContext context) {
+    final header = call.salle != null && call.salle!.isNotEmpty
+        ? '${call.service.emoji}  ${call.serviceDisplayLabel} · ${call.salle}'
+        : '${call.service.emoji}  ${call.serviceDisplayLabel}';
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 32),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [AppColors.bleuMedical, Color(0xFF1565C0)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text('${call.service.emoji}  ${call.service.label}',
-              style: const TextStyle(color: Colors.white70, fontSize: 22)),
-          const SizedBox(height: 24),
+          Text(header,
+              style: const TextStyle(color: Colors.white70, fontSize: 15),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 14),
           Text(
             call.patientName,
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 56,
+              fontSize: 30,
               fontWeight: FontWeight.w700,
             ),
           ),
-          if (call.salle != null) ...[
-            const SizedBox(height: 16),
-            Text(call.salle!,
-                style: const TextStyle(color: AppColors.vertEmeraude, fontSize: 26)),
-          ],
         ],
       ),
     );
@@ -126,7 +198,7 @@ class _PreviousCallsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 72,
+      height: 64,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: calls.length,
@@ -134,19 +206,23 @@ class _PreviousCallsRow extends StatelessWidget {
         itemBuilder: (_, i) {
           final c = calls[i];
           return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white10,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(c.patientName,
-                    style: const TextStyle(color: Colors.white, fontSize: 16)),
-                Text(c.service.label,
-                    style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    style: const TextStyle(color: Colors.white, fontSize: 14)),
+                Text(
+                  c.salle != null && c.salle!.isNotEmpty
+                      ? '${c.service.emoji} ${c.salle}'
+                      : '${c.service.emoji} ${c.serviceDisplayLabel}',
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                ),
               ],
             ),
           );
@@ -157,11 +233,14 @@ class _PreviousCallsRow extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
+  const _EmptyState();
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'En attente du premier appel…',
-      style: TextStyle(color: Colors.white54, fontSize: 22),
+    return const Center(
+      child: Text(
+        'En attente du premier appel…',
+        style: TextStyle(color: Colors.white54, fontSize: 22),
+      ),
     );
   }
 }
