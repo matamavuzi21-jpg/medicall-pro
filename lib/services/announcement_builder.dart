@@ -14,7 +14,7 @@ class AnnouncementBuilder {
 
   static String build(PatientCall call, AppLanguage language) {
     final name = call.patientName;
-    final service = call.service.label;
+    final service = call.serviceDisplayLabel;
     final salle = call.salle;
 
     switch (language) {
