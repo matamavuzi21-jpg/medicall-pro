@@ -8,14 +8,16 @@ import '../widgets/language_selector.dart';
 
 /// Écran destiné aux téléviseurs de la salle d'attente.
 ///
-/// Affiche un appel actif **par salle** en parallèle. C'est essentiel dès
-/// qu'un même service (ex : Consultation médicale) dispose de plusieurs
-/// salles/médecins : Dr X en salle 1 et Dr Y en salle 2 peuvent chacun
-/// appeler un patient au même moment, chaque salle gardant sa propre
-/// tuile à l'écran au lieu de s'écraser mutuellement. Les services sans
-/// salle renseignée (ex : Caisse) gardent une tuile unique par service.
-/// Les annonces vocales sont mises en file (voir TtsService) pour ne
-/// jamais se couper entre elles.
+/// Affiche un appel actif **par salle** en parallèle. Une tuile disparaît
+/// automatiquement si sa salle n'a rien appelé depuis [_tileValidityWindow]
+/// (par défaut 2 heures) — ça évite l'accumulation de tuiles obsolètes au
+/// fil du temps (salles de test, noms mal orthographiés, etc.) et garde
+/// l'écran pertinent pour la journée en cours.
+///
+/// Important : à l'ouverture de cet écran, les appels déjà existants ne
+/// sont **jamais** annoncés à voix haute (seul le premier "instantané" est
+/// affiché silencieusement) — seules les nouvelles arrivées, après
+/// l'ouverture, déclenchent une annonce vocale.
 class TvDisplayScreen extends StatefulWidget {
   const TvDisplayScreen({super.key});
 
@@ -23,8 +25,6 @@ class TvDisplayScreen extends StatefulWidget {
   State<TvDisplayScreen> createState() => _TvDisplayScreenState();
 }
 
-/// Clé de regroupement : une salle donnée si elle est renseignée, sinon
-/// le service lui-même (cas des services sans salle, ex : Caisse).
 String _tileKey(PatientCall call) {
   if (call.salle != null && call.salle!.trim().isNotEmpty) {
     return 'salle:${call.salle!.trim().toLowerCase()}';
@@ -32,10 +32,13 @@ String _tileKey(PatientCall call) {
   return 'service:${call.service.name}';
 }
 
+const _tileValidityWindow = Duration(hours: 2);
+
 class _TvDisplayScreenState extends State<TvDisplayScreen> {
   final Map<String, PatientCall> _latestByTile = {};
   final Map<String, String> _lastAnnouncedIdByTile = {};
   List<PatientCall> _recentHistory = [];
+  bool _hasReceivedInitialSnapshot = false;
 
   @override
   void initState() {
@@ -51,6 +54,18 @@ class _TvDisplayScreenState extends State<TvDisplayScreen> {
           }
         }
       });
+
+      if (!_hasReceivedInitialSnapshot) {
+        for (final call in calls) {
+          final key = _tileKey(call);
+          final latest = _latestByTile[key];
+          if (latest != null) {
+            _lastAnnouncedIdByTile[key] = latest.id;
+          }
+        }
+        _hasReceivedInitialSnapshot = true;
+        return;
+      }
 
       for (final call in calls) {
         final key = _tileKey(call);
@@ -71,7 +86,10 @@ class _TvDisplayScreenState extends State<TvDisplayScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tiles = _latestByTile.values.toList()
+    final cutoff = DateTime.now().subtract(_tileValidityWindow);
+    final tiles = _latestByTile.values
+        .where((c) => c.calledAt.isAfter(cutoff))
+        .toList()
       ..sort((a, b) {
         final byService = a.service.index.compareTo(b.service.index);
         if (byService != 0) return byService;
