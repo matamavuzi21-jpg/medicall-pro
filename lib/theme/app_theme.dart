@@ -2,27 +2,64 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Charte graphique officielle de MediCall Pro.
-/// Style : Apple + Microsoft + Google Material 3. Épuré, moderne, professionnel.
+///
+/// Palette (6 teintes nommées, approfondies depuis la version d'origine) :
+/// Bleu Lomami, Vert Wagenia, Ivoire Kaolin, Anthracite Basalte,
+/// Ocre Alerte, Rouge Kuba.
+///
+/// Typographie à trois voix :
+/// - Fraunces : nom de marque "MediCall Pro" (voir [AppTypography.wordmark])
+/// - Inter : toute l'interface (boutons, champs, listes)
+/// - JetBrains Mono : données chiffrées (heures, historique, tableau de bord)
 class AppColors {
   AppColors._();
 
-  static const Color bleuMedical = Color(0xFF0D47A1);
-  static const Color vertEmeraude = Color(0xFF00A86B);
+  static const Color bleuMedical = Color(0xFF0B3D78); // Bleu Lomami
+  static const Color vertEmeraude = Color(0xFF049B6B); // Vert Wagenia
   static const Color blanc = Color(0xFFFFFFFF);
-  static const Color grisAnthracite = Color(0xFF2E2E2E);
+  static const Color grisAnthracite = Color(0xFF24262B); // Anthracite Basalte
 
-  static const Color fond = Color(0xFFF5F7FA);
-  static const Color grisClair = Color(0xFFE3E7ED);
-  static const Color erreur = Color(0xFFD32F2F);
+  static const Color fond = Color(0xFFF6F2EA); // Ivoire Kaolin
+  static const Color grisClair = Color(0xFFE6E1D6);
+  static const Color erreur = Color(0xFFC13F2E); // Rouge Kuba
   static const Color succes = vertEmeraude;
-  static const Color attention = Color(0xFFFFA000);
+  static const Color attention = Color(0xFFE2921F); // Ocre Alerte
+}
+
+/// Styles typographiques transverses partagés entre plusieurs écrans.
+class AppTypography {
+  AppTypography._();
+
+  /// Nom de marque "MediCall Pro" — Fraunces, la voix éditoriale du logo.
+  /// Utilisé sur l'écran de connexion et l'en-tête de l'écran TV.
+  static TextStyle wordmark({double fontSize = 26, Color? color}) {
+    return GoogleFonts.fraunces(
+      fontSize: fontSize,
+      fontWeight: FontWeight.w600,
+      color: color ?? AppColors.bleuMedical,
+      height: 1.05,
+    );
+  }
+
+  /// Données chiffrées (heures, historique, statistiques) — JetBrains Mono.
+  static TextStyle mono({
+    double fontSize = 14,
+    FontWeight weight = FontWeight.w700,
+    Color? color,
+  }) {
+    return GoogleFonts.jetBrainsMono(
+      fontSize: fontSize,
+      fontWeight: weight,
+      color: color ?? AppColors.grisAnthracite,
+    );
+  }
 }
 
 class AppTheme {
   AppTheme._();
 
   static ThemeData get light {
-    final baseTextTheme = GoogleFonts.poppinsTextTheme();
+    final baseTextTheme = GoogleFonts.interTextTheme();
 
     return ThemeData(
       useMaterial3: true,
@@ -45,9 +82,9 @@ class AppTheme {
         foregroundColor: AppColors.grisAnthracite,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.poppins(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 19,
+          fontWeight: FontWeight.w700,
           color: AppColors.grisAnthracite,
         ),
       ),
@@ -59,9 +96,10 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: GoogleFonts.poppins(
+          textStyle: GoogleFonts.inter(
             fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
           ),
           elevation: 0,
         ),
