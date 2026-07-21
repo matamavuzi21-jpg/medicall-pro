@@ -71,14 +71,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'By Y2A HEALTHTECH',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      letterSpacing: 1.4,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.vertEmeraude.withValues(alpha: 0.85),
-                    ),
-                  ),
                   const SizedBox(height: AppSpacing.xl),
                   TextField(
                     controller: _emailCtrl,
