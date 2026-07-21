@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/supabase_service.dart';
+import '../widgets/app_logo.dart';
 import 'call_patient_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -31,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const CallPatientScreen()),
       );
     } catch (e) {
-      setState(() => _error = 'ERREUR RÉELLE : ${e.toString()}');
+      setState(() => _error = 'Identifiants incorrects. Veuillez réessayer.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -49,15 +50,18 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _Logo(),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    'MediCall Pro',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.bleuMedical,
-                        ),
+                  Container(
+                    width: 104,
+                    height: 104,
+                    decoration: BoxDecoration(
+                      color: AppColors.bleuMedical,
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    padding: const EdgeInsets.all(22),
+                    child: const AppLogo(size: 60, color: Colors.white),
                   ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text('MediCall Pro', style: AppTypography.wordmark(fontSize: 30)),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Gestion des appels de patients',
@@ -65,9 +69,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: AppColors.grisAnthracite.withValues(alpha: 0.6),
                         ),
                   ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'UNE INNOVATION Y2A HEALTHTECH',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      letterSpacing: 1.4,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.vertEmeraude.withValues(alpha: 0.85),
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.xl),
-                  const Text('BUILD TEST 7', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: AppSpacing.md),
                   TextField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
@@ -109,27 +121,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _Logo extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Placeholder du logo (croix médicale + ondes sonores + cercle de flux).
-    // À remplacer par assets/logo/medicall_logo.svg en phase de design final.
-    return Container(
-      width: 96,
-      height: 96,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.bleuMedical, AppColors.vertEmeraude],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: const Icon(Icons.add_rounded, color: Colors.white, size: 48),
     );
   }
 }
