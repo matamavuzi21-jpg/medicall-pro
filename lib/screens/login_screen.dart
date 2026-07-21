@@ -71,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'UNE INNOVATION Y2A HEALTHTECH',
+                    'By Y2A HEALTHTECH',
                     style: TextStyle(
                       fontSize: 10.5,
                       letterSpacing: 1.4,
