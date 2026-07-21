@@ -5,7 +5,7 @@ import '../services/supabase_service.dart';
 import '../services/tts_service.dart';
 import '../services/announcement_builder.dart';
 import '../widgets/language_selector.dart';
-
+import '../widgets/app_logo.dart';
 /// Écran destiné aux téléviseurs de la salle d'attente.
 ///
 /// Affiche un appel actif **par salle** en parallèle. Une tuile disparaît
@@ -105,16 +105,11 @@ class _TvDisplayScreenState extends State<TvDisplayScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.local_hospital_rounded,
-                      color: AppColors.vertEmeraude, size: 32),
+                  const AppLogo(size: 30, color: AppColors.vertEmeraude),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'MediCall Pro',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTypography.wordmark(fontSize: 24, color: Colors.white),
                   ),
                   const Spacer(),
                   const LanguageSelector(),
