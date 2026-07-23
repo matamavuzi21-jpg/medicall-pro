@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/supabase_service.dart';
 import '../widgets/app_logo.dart';
-import 'call_patient_screen.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const CallPatientScreen()),
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } catch (e) {
       setState(() => _error = 'Identifiants incorrects. Veuillez réessayer.');
