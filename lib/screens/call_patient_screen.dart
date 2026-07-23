@@ -10,10 +10,6 @@ import '../services/tts_service.dart';
 import '../services/announcement_builder.dart';
 import '../widgets/sync_status_badge.dart';
 import '../widgets/repeat_settings_dialog.dart';
-import 'user_list_screen.dart';
-import 'history_screen.dart';
-import 'dashboard_screen.dart';
-import 'tv_display_screen.dart';
 
 /// Écran principal : saisie du patient et déclenchement de l'appel.
 ///
@@ -140,37 +136,7 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Appeler un patient'),
-        actions: [
-          const SyncStatusBadge(),
-          IconButton(
-            tooltip: 'Écran TV',
-            icon: const Icon(Icons.tv_rounded),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const TvDisplayScreen()),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Tableau de bord',
-            icon: const Icon(Icons.bar_chart_rounded),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const DashboardScreen()),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Historique des appels',
-            icon: const Icon(Icons.history_rounded),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const HistoryScreen()),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Gestion des utilisateurs',
-            icon: const Icon(Icons.group_outlined),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const UserListScreen()),
-            ),
-          ),
-        ],
+        actions: const [SyncStatusBadge()],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -253,6 +219,9 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
   }
 }
 
+/// Carte de contrôle du mode "1 appareil" : active/désactive l'annonce
+/// vocale directement sur ce téléphone (utile en zone reculée, avec une
+/// enceinte Bluetooth, sans second appareil dédié à l'écran TV).
 class _LocalAnnounceCard extends StatelessWidget {
   final bool enabled;
   final ValueChanged<bool> onChanged;
@@ -306,6 +275,7 @@ class _LocalAnnounceCard extends StatelessWidget {
   }
 }
 
+/// Menu déroulant compact listant les 10 services, avec emoji.
 class _ServiceDropdown extends StatelessWidget {
   final ServiceType selected;
   final ValueChanged<ServiceType?> onChanged;
@@ -356,6 +326,8 @@ class _ServiceDropdown extends StatelessWidget {
   }
 }
 
+/// Choix multiples (chips) pour les services proposant des sous-options
+/// (Imagerie médicale, Pavillon).
 class _SubOptionsChips extends StatelessWidget {
   final List<String> options;
   final Set<String> selected;
