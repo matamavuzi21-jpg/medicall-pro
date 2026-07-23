@@ -62,4 +62,22 @@ class SupabaseService {
         .map((rows) =>
             rows.map((r) => PatientCall.fromJson(r)).toList());
   }
+
+  // ---------- Appels du personnel soignant ----------
+
+  Future<void> callStaff(StaffCall call) async {
+    await client.from('staff_calls').insert(call.toJson());
+  }
+
+  Future<List<StaffCall>> getTodayStaffHistory() async {
+    final start = DateTime.now().toUtc().toIso8601String().substring(0, 10);
+    final rows = await client
+        .from('staff_calls')
+        .select()
+        .gte('called_at', start)
+        .order('called_at', ascending: false);
+    return (rows as List)
+        .map((r) => StaffCall.fromJson(r as Map<String, dynamic>))
+        .toList();
+  }
 }
