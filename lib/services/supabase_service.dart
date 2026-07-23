@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/patient_call.dart';
-
+import '../models/staff_call.dart';
 /// Centralise tous les échanges avec Supabase (auth, base de données,
 /// synchronisation temps réel entre le poste d'appel et l'écran TV).
 class SupabaseService {
