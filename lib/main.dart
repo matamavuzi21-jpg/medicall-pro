@@ -3,6 +3,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'theme/app_theme.dart';
 import 'services/supabase_service.dart';
 import 'services/offline_queue_service.dart';
+import 'services/staff_offline_queue_service.dart';
 import 'screens/login_screen.dart';
 
 Future<void> main() async {
@@ -10,6 +11,7 @@ Future<void> main() async {
   await initializeDateFormatting('fr_FR');
   await SupabaseService.initialize();
   await OfflineQueueService.instance.start();
+  await StaffOfflineQueueService.instance.start();
   runApp(const MediCallProApp());
 }
 
