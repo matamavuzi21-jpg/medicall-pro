@@ -69,8 +69,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: AppColors.grisAnthracite.withValues(alpha: 0.6),
                         ),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
                   const SizedBox(height: AppSpacing.xl),
                   TextField(
                     controller: _emailCtrl,
