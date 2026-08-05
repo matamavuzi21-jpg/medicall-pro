@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/patient_call.dart';
@@ -6,18 +7,8 @@ import '../services/tts_service.dart';
 import '../services/announcement_builder.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/app_logo.dart';
+
 /// Écran destiné aux téléviseurs de la salle d'attente.
-///
-/// Affiche un appel actif **par salle** en parallèle. Une tuile disparaît
-/// automatiquement si sa salle n'a rien appelé depuis [_tileValidityWindow]
-/// (par défaut 2 heures) — ça évite l'accumulation de tuiles obsolètes au
-/// fil du temps (salles de test, noms mal orthographiés, etc.) et garde
-/// l'écran pertinent pour la journée en cours.
-///
-/// Important : à l'ouverture de cet écran, les appels déjà existants ne
-/// sont **jamais** annoncés à voix haute (seul le premier "instantané" est
-/// affiché silencieusement) — seules les nouvelles arrivées, après
-/// l'ouverture, déclenchent une annonce vocale.
 class TvDisplayScreen extends StatefulWidget {
   const TvDisplayScreen({super.key});
 
@@ -39,10 +30,17 @@ class _TvDisplayScreenState extends State<TvDisplayScreen> {
   final Map<String, String> _lastAnnouncedIdByTile = {};
   List<PatientCall> _recentHistory = [];
   bool _hasReceivedInitialSnapshot = false;
+  late DateTime _now;
+  Timer? _clockTimer;
 
   @override
   void initState() {
     super.initState();
+    _now = DateTime.now();
+    _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+
     SupabaseService.instance.watchCalls().listen((calls) {
       setState(() {
         _recentHistory = calls.take(6).toList();
@@ -85,6 +83,18 @@ class _TvDisplayScreenState extends State<TvDisplayScreen> {
   }
 
   @override
+  void dispose() {
+    _clockTimer?.cancel();
+    super.dispose();
+  }
+
+  String get _formattedClock {
+    final h = _now.hour.toString().padLeft(2, '0');
+    final m = _now.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  @override
   Widget build(BuildContext context) {
     final cutoff = DateTime.now().subtract(_tileValidityWindow);
     final tiles = _latestByTile.values
@@ -105,11 +115,16 @@ class _TvDisplayScreenState extends State<TvDisplayScreen> {
             children: [
               Row(
                 children: [
-                  const AppLogo(size: 30, color: AppColors.vertEmeraude),
+                  const AppLogo(size: 28, color: AppColors.vertEmeraude),
                   const SizedBox(width: 12),
                   Text(
                     'MediCall Pro',
-                    style: AppTypography.wordmark(fontSize: 24, color: Colors.white),
+                    style: AppTypography.wordmark(fontSize: 22, color: Colors.white),
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
+                    _formattedClock,
+                    style: AppTypography.mono(fontSize: 18, color: Colors.white70),
                   ),
                   const Spacer(),
                   const LanguageSelector(),
@@ -150,7 +165,7 @@ class _TileGrid extends StatelessWidget {
         crossAxisCount: crossAxisCount,
         mainAxisSpacing: AppSpacing.md,
         crossAxisSpacing: AppSpacing.md,
-        childAspectRatio: 1.5,
+        childAspectRatio: 1.25,
       ),
       itemBuilder: (_, i) => _TileCard(call: calls[i]),
     );
@@ -163,39 +178,101 @@ class _TileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final header = call.salle != null && call.salle!.isNotEmpty
-        ? '${call.service.emoji}  ${call.serviceDisplayLabel} · ${call.salle}'
-        : '${call.service.emoji}  ${call.serviceDisplayLabel}';
+    final caption = AnnouncementBuilder.build(call, TtsService.instance.currentLanguage);
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.bleuMedical, Color(0xFF1565C0)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
+        color: const Color(0xFF1B1D22),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(header,
-              style: const TextStyle(color: Colors.white70, fontSize: 15),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 14),
-          Text(
-            call.patientName,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 30,
-              fontWeight: FontWeight.w700,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
+            child: Column(
+              children: [
+                Text('PATIENT APPELÉ',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5,
+                    )),
+                const SizedBox(height: 10),
+                Text(
+                  call.patientName,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.wordmark(fontSize: 30, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            color: call.service.tileColor,
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    call.serviceDisplayLabel.toUpperCase(),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (call.salle != null && call.salle!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                call.salle!.toUpperCase(),
+                style: TextStyle(
+                  color: call.service.tileColor,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          const Spacer(),
+          Container(
+            width: double.infinity,
+            color: Colors.black.withValues(alpha: 0.25),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+            child: Row(
+              children: [
+                Icon(Icons.volume_up_rounded,
+                    color: Colors.white.withValues(alpha: 0.6), size: 15),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    caption,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.75),
+                      fontSize: 11.5,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
