@@ -9,15 +9,11 @@ import '../services/connectivity_service.dart';
 import '../services/tts_service.dart';
 import '../services/staff_announcement_builder.dart';
 import '../widgets/sync_status_badge.dart';
+import '../widgets/service_tile_grid.dart';
 
-/// Écran du 2ᵉ volet : appeler un membre du personnel soignant (médecin,
-/// infirmier, sage-femme, technicien de labo, anesthésiste-réanimateur)
-/// dans un service donné — ex : "Le Docteur Mukendi est demandé en
-/// Pédiatrie, en urgence."
-///
-/// Fonctionne exactement comme l'appel de patient : enregistrement
-/// hors-ligne garanti, synchronisation automatique, annonce vocale
-/// immédiate sur cet appareil (mode 1 appareil).
+/// Écran du 2ᵉ volet : appeler un membre du personnel soignant vers un
+/// service donné — ex : "Le Docteur Mukendi est demandé en Pédiatrie,
+/// en urgence."
 class CallStaffScreen extends StatefulWidget {
   const CallStaffScreen({super.key});
 
@@ -34,8 +30,7 @@ class _CallStaffScreenState extends State<CallStaffScreen> {
   bool _urgent = false;
   bool _sending = false;
 
-  void _onDestinationChanged(ServiceType? value) {
-    if (value == null) return;
+  void _onDestinationChanged(ServiceType value) {
     setState(() {
       _selectedDestination = value;
       _selectedSubDestinations.clear();
@@ -138,16 +133,16 @@ class _CallStaffScreenState extends State<CallStaffScreen> {
               const SizedBox(height: AppSpacing.lg),
               Text('Fonction', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.sm),
-              _RoleDropdown(
+              _RoleChips(
                 selected: _selectedRole,
-                onChanged: (r) => setState(() => _selectedRole = r!),
+                onChanged: (r) => setState(() => _selectedRole = r),
               ),
               const SizedBox(height: AppSpacing.lg),
               Text('Demandé en', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.sm),
-              _DestinationDropdown(
+              ServiceTileGrid(
                 selected: _selectedDestination,
-                onChanged: _onDestinationChanged,
+                onSelect: _onDestinationChanged,
               ),
               if (_selectedDestination.hasSubOptions) ...[
                 const SizedBox(height: AppSpacing.md),
@@ -209,88 +204,29 @@ class _CallStaffScreenState extends State<CallStaffScreen> {
   }
 }
 
-class _RoleDropdown extends StatelessWidget {
+class _RoleChips extends StatelessWidget {
   final StaffRole selected;
-  final ValueChanged<StaffRole?> onChanged;
-  const _RoleDropdown({required this.selected, required this.onChanged});
+  final ValueChanged<StaffRole> onChanged;
+  const _RoleChips({required this.selected, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.blanc,
-        borderRadius: BorderRadius.circular(AppSpacing.radius),
-        border: Border.all(color: AppColors.grisClair),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<StaffRole>(
-          value: selected,
-          isExpanded: true,
-          icon: const Icon(Icons.expand_more_rounded),
-          items: StaffRole.values.map((r) {
-            return DropdownMenuItem(
-              value: r,
-              child: Row(
-                children: [
-                  Text(r.emoji, style: const TextStyle(fontSize: 20)),
-                  const SizedBox(width: 12),
-                  Text(r.label,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.grisAnthracite)),
-                ],
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
-}
-
-class _DestinationDropdown extends StatelessWidget {
-  final ServiceType selected;
-  final ValueChanged<ServiceType?> onChanged;
-  const _DestinationDropdown({required this.selected, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.blanc,
-        borderRadius: BorderRadius.circular(AppSpacing.radius),
-        border: Border.all(color: AppColors.grisClair),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<ServiceType>(
-          value: selected,
-          isExpanded: true,
-          icon: const Icon(Icons.expand_more_rounded),
-          items: ServiceType.values.map((s) {
-            return DropdownMenuItem(
-              value: s,
-              child: Row(
-                children: [
-                  Text(s.emoji, style: const TextStyle(fontSize: 20)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(s.label,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.grisAnthracite)),
-                  ),
-                  if (s.hasSubOptions)
-                    const Icon(Icons.list_rounded, size: 18, color: Colors.grey),
-                ],
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
-      ),
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: StaffRole.values.map((r) {
+        final isSelected = r == selected;
+        return ChoiceChip(
+          label: Text('${r.emoji} ${r.label}'),
+          selected: isSelected,
+          selectedColor: AppColors.bleuMedical,
+          labelStyle: TextStyle(
+            color: isSelected ? Colors.white : AppColors.grisAnthracite,
+            fontWeight: FontWeight.w600,
+          ),
+          onSelected: (_) => onChanged(r),
+        );
+      }).toList(),
     );
   }
 }
