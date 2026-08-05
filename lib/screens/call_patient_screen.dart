@@ -10,17 +10,9 @@ import '../services/tts_service.dart';
 import '../services/announcement_builder.dart';
 import '../widgets/sync_status_badge.dart';
 import '../widgets/repeat_settings_dialog.dart';
+import '../widgets/service_tile_grid.dart';
 
 /// Écran principal : saisie du patient et déclenchement de l'appel.
-///
-/// Deux modes d'utilisation possibles, au choix de l'hôpital :
-/// 1. "Mode 2 appareils" : ce poste + un second appareil ouvert sur
-///    TvDisplayScreen (icône 📺), affiché en salle d'attente.
-/// 2. "Mode 1 appareil" (zones reculées, sans second appareil) : ce même
-///    poste, relié en Bluetooth à une enceinte, annonce lui-même le
-///    patient à voix haute juste après l'appel — grâce au commutateur
-///    "Annonce vocale sur cet appareil" ci-dessous. Les deux modes
-///    peuvent aussi être actifs en même temps sans conflit.
 class CallPatientScreen extends StatefulWidget {
   const CallPatientScreen({super.key});
 
@@ -58,8 +50,7 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
     await prefs.setBool(_localAnnouncePrefsKey, value);
   }
 
-  void _onServiceChanged(ServiceType? service) {
-    if (service == null) return;
+  void _onServiceChanged(ServiceType service) {
     setState(() {
       _selectedService = service;
       _selectedSubServices.clear();
@@ -163,9 +154,9 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
               const SizedBox(height: AppSpacing.lg),
               Text('Service', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.sm),
-              _ServiceDropdown(
+              ServiceTileGrid(
                 selected: _selectedService,
-                onChanged: _onServiceChanged,
+                onSelect: _onServiceChanged,
               ),
               if (_selectedService.hasSubOptions) ...[
                 const SizedBox(height: AppSpacing.md),
@@ -219,9 +210,6 @@ class _CallPatientScreenState extends State<CallPatientScreen> {
   }
 }
 
-/// Carte de contrôle du mode "1 appareil" : active/désactive l'annonce
-/// vocale directement sur ce téléphone (utile en zone reculée, avec une
-/// enceinte Bluetooth, sans second appareil dédié à l'écran TV).
 class _LocalAnnounceCard extends StatelessWidget {
   final bool enabled;
   final ValueChanged<bool> onChanged;
@@ -248,8 +236,8 @@ class _LocalAnnounceCard extends StatelessWidget {
                       style: TextStyle(fontWeight: FontWeight.w600)),
                   Text(
                     enabled
-                        ? 'Utile en zone reculée : reliez une enceinte Bluetooth, aucun second appareil requis.'
-                        : 'Désactivé — utilisez ce mode si un écran TV séparé s\'occupe déjà de l\'annonce.',
+                        ? 'Utile en zone reculée : reliez une enceinte Bluetooth.'
+                        : 'Désactivé — un écran TV séparé s\'occupe de l\'annonce.',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
@@ -275,59 +263,6 @@ class _LocalAnnounceCard extends StatelessWidget {
   }
 }
 
-/// Menu déroulant compact listant les 10 services, avec emoji.
-class _ServiceDropdown extends StatelessWidget {
-  final ServiceType selected;
-  final ValueChanged<ServiceType?> onChanged;
-
-  const _ServiceDropdown({required this.selected, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.blanc,
-        borderRadius: BorderRadius.circular(AppSpacing.radius),
-        border: Border.all(color: AppColors.grisClair),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<ServiceType>(
-          value: selected,
-          isExpanded: true,
-          icon: const Icon(Icons.expand_more_rounded),
-          borderRadius: BorderRadius.circular(AppSpacing.radius),
-          items: ServiceType.values.map((s) {
-            return DropdownMenuItem(
-              value: s,
-              child: Row(
-                children: [
-                  Text(s.emoji, style: const TextStyle(fontSize: 20)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      s.label,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.grisAnthracite,
-                      ),
-                    ),
-                  ),
-                  if (s.hasSubOptions)
-                    const Icon(Icons.list_rounded, size: 18, color: Colors.grey),
-                ],
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
-}
-
-/// Choix multiples (chips) pour les services proposant des sous-options
-/// (Imagerie médicale, Pavillon).
 class _SubOptionsChips extends StatelessWidget {
   final List<String> options;
   final Set<String> selected;
