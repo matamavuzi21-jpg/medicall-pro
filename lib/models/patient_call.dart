@@ -1,31 +1,39 @@
+import 'package:flutter/material.dart';
+
 /// Services disponibles pour l'appel d'un patient, dans l'ordre du
 /// parcours patient habituel d'un hôpital.
 ///
 /// Deux services (Imagerie médicale, Pavillon) proposent des sous-choix
 /// multiples (ex : Radiographie + Scanner) via [subOptions] — l'agent
 /// peut en sélectionner un ou plusieurs à l'appel (voir PatientCall.subServices).
+///
+/// [tileColor] est la teinte d'accent utilisée pour la tuile de
+/// sélection du service (icône colorée quand non sélectionné, fond plein
+/// quand sélectionné) — voir les grilles de service des écrans d'appel.
 enum ServiceType {
-  reception('Réception et Accueil', '🛎️'),
-  caisse('Caisse', '💳'),
-  urgences('Urgences', '🚑'),
-  consultation('Consultation médicale', '🩺'),
-  laboratoire('Laboratoire d\'analyse', '🧪'),
-  imagerie('Imagerie médicale', '🩻',
+  reception('Réception et Accueil', '🛎️', Color(0xFF0E8E82)),
+  caisse('Caisse', '💳', Color(0xFF049B6B)),
+  urgences('Urgences', '🚑', Color(0xFFC13F2E)),
+  consultation('Consultation médicale', '🩺', Color(0xFF0B3D78)),
+  laboratoire('Laboratoire d\'analyse', '🧪', Color(0xFF7C4DFF)),
+  imagerie('Imagerie médicale', '🩻', Color(0xFF1E88E5),
       subOptions: ['Radiographie', 'Échographie', 'Scanner']),
-  salleSoins('Salle de soins', '💉'),
-  pharmacie('Pharmacie', '💊'),
-  pavillon('Pavillon', '🏨', subOptions: [
+  salleSoins('Salle de soins', '💉', Color(0xFF00897B)),
+  pharmacie('Pharmacie', '💊', Color(0xFFE2921F)),
+  pavillon('Pavillon', '🏨', Color(0xFF3F51B5), subOptions: [
     'Médecine interne',
     'Pédiatrie',
     'Gynéco-obstétrique',
     'Chirurgie',
   ]),
-  blocOperatoire('Bloc opératoire', '🔪');
+  blocOperatoire('Bloc opératoire', '🔪', Color(0xFF6D4C41));
 
   final String label;
   final String emoji;
+  final Color tileColor;
   final List<String> subOptions;
-  const ServiceType(this.label, this.emoji, {this.subOptions = const []});
+  const ServiceType(this.label, this.emoji, this.tileColor,
+      {this.subOptions = const []});
 
   bool get hasSubOptions => subOptions.isNotEmpty;
 }
