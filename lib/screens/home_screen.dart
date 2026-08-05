@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/dashboard_service.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/sync_status_badge.dart';
 import 'call_patient_screen.dart';
@@ -10,16 +11,21 @@ import 'history_screen.dart';
 import 'user_list_screen.dart';
 
 /// Écran d'accueil : le hub central de MediCall Pro, après connexion.
-///
-/// Sépare clairement les deux volets de l'application :
-/// 1. Appeler un patient (parcours vers les services de l'hôpital)
-/// 2. Appeler le personnel soignant (médecin, infirmier, sage-femme,
-///    technicien de labo, anesthésiste-réanimateur, avec option urgence)
-///
-/// Les icônes utilitaires (écran TV, tableau de bord, historique,
-/// utilisateurs) vivent ici, communes aux deux volets.
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late Future<DashboardStats> _statsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _statsFuture = DashboardService.instance.getStatsForDate(DateTime.now());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,14 +72,16 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _StatsRow(statsFuture: _statsFuture),
+              const SizedBox(height: AppSpacing.lg),
               Text('Que souhaitez-vous faire ?',
                   style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
               _VoletCard(
                 emoji: '📋',
                 title: 'Appeler un patient',
@@ -96,6 +104,89 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Bandeau de chiffres du jour — appels totaux et service le plus actif,
+/// tirés de DashboardService (vraies données, jamais inventées).
+class _StatsRow extends StatelessWidget {
+  final Future<DashboardStats> statsFuture;
+  const _StatsRow({required this.statsFuture});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<DashboardStats>(
+      future: statsFuture,
+      builder: (context, snapshot) {
+        final stats = snapshot.data;
+        return Row(
+          children: [
+            Expanded(
+              child: _StatChip(
+                icon: Icons.campaign_rounded,
+                label: 'Appels aujourd\'hui',
+                value: stats == null ? '—' : '${stats.totalCalls}',
+                color: AppColors.bleuMedical,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _StatChip(
+                icon: Icons.local_hospital_rounded,
+                label: 'Service le plus actif',
+                value: stats?.busiestService == null
+                    ? '—'
+                    : '${stats!.busiestService!.emoji} ${stats.busiestService!.label}',
+                color: AppColors.vertEmeraude,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _StatChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.blanc,
+        borderRadius: BorderRadius.circular(AppSpacing.radius),
+        border: Border.all(color: AppColors.grisClair),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: AppSpacing.sm),
+          Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: AppColors.grisAnthracite.withValues(alpha: 0.6))),
+        ],
       ),
     );
   }
