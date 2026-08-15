@@ -3,14 +3,10 @@ import 'package:flutter/material.dart';
 
 /// Le logo officiel de MediCall Pro.
 ///
-/// Concept : la croix médicale est formée de 4 pavillons de porte-voix
-/// diffusant le son dans toutes les directions — l'annonce vocale et le
-/// soin ne sont plus deux idées séparées, mais une seule forme. Deux arcs
-/// représentent les ondes sonores qui s'en échappent.
-///
-/// Dessiné entièrement en code (CustomPainter) : net à n'importe quelle
-/// taille (icône d'app comme grand format), aucun fichier image à gérer
-/// ni à régénérer si la couleur doit changer.
+/// Un anneau fin, une croix médicale simple au centre, et deux arcs
+/// verts représentant l'onde sonore de l'annonce vocale — toujours en
+/// vert, quel que soit le fond, pour rester un repère de marque unique
+/// et reconnaissable.
 class AppLogo extends StatelessWidget {
   final double size;
   final Color color;
@@ -33,6 +29,8 @@ class AppLogo extends StatelessWidget {
 }
 
 class _AppLogoPainter extends CustomPainter {
+  static const _wagenia = Color(0xFF2FC090);
+
   final Color color;
   final bool showSoundWaves;
 
@@ -42,39 +40,35 @@ class _AppLogoPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final s = size.width / 260;
     final center = Offset(size.width / 2, size.height / 2);
-    final fillPaint = Paint()
+
+    final ringPaint = Paint()
+      ..color = color.withValues(alpha: 0.32)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5 * s;
+    canvas.drawCircle(center, 92 * s, ringPaint);
+
+    final crossPaint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
-
-    Path hornPath() {
-      final p = Path();
-      p.moveTo(116 * s, 100 * s);
-      p.lineTo(102 * s, 30 * s);
-      p.lineTo(158 * s, 30 * s);
-      p.lineTo(144 * s, 100 * s);
-      p.close();
-      return p;
-    }
-
-    for (var i = 0; i < 4; i++) {
-      canvas.save();
-      canvas.translate(center.dx, center.dy);
-      canvas.rotate(i * math.pi / 2);
-      canvas.translate(-center.dx, -center.dy);
-      canvas.drawPath(hornPath(), fillPaint);
-      canvas.restore();
-    }
-
-    canvas.drawCircle(center, 21 * s, fillPaint);
+    final vBar = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: center, width: 32 * s, height: 96 * s),
+      Radius.circular(9 * s),
+    );
+    final hBar = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: center, width: 96 * s, height: 32 * s),
+      Radius.circular(9 * s),
+    );
+    canvas.drawRRect(vBar, crossPaint);
+    canvas.drawRRect(hBar, crossPaint);
 
     if (showSoundWaves) {
-      final wavePaint1 = Paint()
-        ..color = color.withValues(alpha: 0.85)
+      final wave1 = Paint()
+        ..color = _wagenia
         ..style = PaintingStyle.stroke
         ..strokeWidth = 7 * s
         ..strokeCap = StrokeCap.round;
-      final wavePaint2 = Paint()
-        ..color = color.withValues(alpha: 0.5)
+      final wave2 = Paint()
+        ..color = _wagenia.withValues(alpha: 0.55)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 7 * s
         ..strokeCap = StrokeCap.round;
@@ -83,8 +77,8 @@ class _AppLogoPainter extends CustomPainter {
       final rect2 = Rect.fromCircle(center: center, radius: 148 * s);
       const startAngle = -70 * math.pi / 180;
       const sweepAngle = 50 * math.pi / 180;
-      canvas.drawArc(rect1, startAngle, sweepAngle, false, wavePaint1);
-      canvas.drawArc(rect2, startAngle, sweepAngle, false, wavePaint2);
+      canvas.drawArc(rect1, startAngle, sweepAngle, false, wave1);
+      canvas.drawArc(rect2, startAngle, sweepAngle, false, wave2);
     }
   }
 
