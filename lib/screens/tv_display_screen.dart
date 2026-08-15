@@ -7,6 +7,7 @@ import '../services/tts_service.dart';
 import '../services/announcement_builder.dart';
 import '../widgets/language_selector.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/app_wordmark.dart';
 
 /// Écran destiné aux téléviseurs de la salle d'attente.
 class TvDisplayScreen extends StatefulWidget {
@@ -117,10 +118,7 @@ class _TvDisplayScreenState extends State<TvDisplayScreen> {
                 children: [
                   const AppLogo(size: 28, color: AppColors.vertEmeraude),
                   const SizedBox(width: 12),
-                  Text(
-                    'MediCall Pro',
-                    style: AppTypography.wordmark(fontSize: 22, color: Colors.white),
-                  ),
+                  const AppWordmark(fontSize: 22, primaryColor: Colors.white),
                   const SizedBox(width: 16),
                   Text(
                     _formattedClock,
