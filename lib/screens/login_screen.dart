@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/supabase_service.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/app_wordmark.dart';
 import '../widgets/heartbeat_line.dart';
 import 'home_screen.dart';
 
@@ -65,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: const AppLogo(size: 60, color: Colors.white),
                         ),
                         const SizedBox(height: AppSpacing.lg),
-                        Text('MediCall Pro', style: AppTypography.wordmark(fontSize: 30)),
+                        const AppWordmark(fontSize: 30),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
                           'Un appel simple, une prise en charge plus rapide',
