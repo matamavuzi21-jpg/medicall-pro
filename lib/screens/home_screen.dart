@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/dashboard_service.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/app_wordmark.dart';
 import '../widgets/sync_status_badge.dart';
 import 'call_patient_screen.dart';
 import 'call_staff_screen.dart';
@@ -36,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const AppLogo(size: 22, color: AppColors.bleuMedical),
             const SizedBox(width: 8),
-            Text('MediCall Pro', style: AppTypography.wordmark(fontSize: 18)),
+            const AppWordmark(fontSize: 18),
           ],
         ),
         actions: [
