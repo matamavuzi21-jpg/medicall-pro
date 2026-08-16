@@ -34,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } catch (e) {
-      setState(() => _error = 'Identifiants incorrects. Veuillez réessayer.');
+      setState(() => _error = 'ERREUR RÉELLE : ${e.toString()}');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
